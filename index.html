@@ -8,11 +8,13 @@
   <script type="text/javascript" src="https://js.api.here.com/v3/3.1/mapsjs-service.js"></script>
   <script type="text/javascript" src="https://js.api.here.com/v3/3.1/mapsjs-ui.js"></script>
   <script type="text/javascript" src="https://js.api.here.com/v3/3.1/mapsjs-mapevents.js"></script>
+  <script type="text/javascript" src="./scripts/haversine.js"></script>
   </head>
   <body style="padding: 0; margin: 0;">
   <div id="mapContainer" style="width: 100vw; height: 100vh"></div>
-  <!-- <script type="text/javascript" src='extruded.js'></script> -->
+
   <script>
+    var heading = 0
     var platform = new H.service.Platform({
     'apikey': 'HVkjftxBI62AZX0UeaqaQ-iyi8YsWxrD1-pniCO3jO8'
     });
@@ -24,16 +26,167 @@
     var map = new H.Map( document.getElementById('mapContainer'),
       maptypes.vector.normal.map,
       {
-        zoom: 10,
+        zoom: 17,
+        tilt: 45,
         center: { lng: 13.4, lat: 52.51 },
         pixelRatio: window.devicePixelRatio || 1
       });
 
+    addShapesToMap(map)
 
-  window.addEventListener('resize', () => map.getViewPort().resize());
-  var behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
-  var ui = H.ui.UI.createDefault(map, maptypes);
+    map.getViewModel().setLookAtData({ tilt: 45, heading: heading });
+    window.addEventListener('resize', () => map.getViewPort().resize());
+    var behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+    var ui = H.ui.UI.createDefault(map, maptypes);
+
+  // setInterval(turnMap, 59)
+
+
+function turnMap() {
+      if (heading === 360) {
+        heading = 0
+        map.getViewModel().setLookAtData({ tilt: 45,heading: 0 })
+      }
+      else {
+        map.getViewModel().setLookAtData({ tilt: 45,heading: heading++ })
+      }
+      // console.log(heading)
+  }
+
+function addShapesToMap(map) {
+
+  //bin all the geop oints into groups contained within the area of the points: draw a box.
+  //select each group within a radius r, get the average(?) of the values if given, 
+  //otherwise consider it density map and keep track of each number of points in an array
+  //this will define the height of the z axis 
+  /*
+        decimal  degrees    distance
+        places
+        -------------------------------  
+        0        1.0        111 km
+        1        0.1        11.1 km
+        2        0.01       1.11 km
+        3        0.001      111 m  this is 130 meters, i checked everywhere.
+        4        0.0001     11.1 m
+        5        0.00001    1.11 m
+        6        0.000001   0.111 m
+        7        0.0000001  1.11 cm
+        8        0.00000001 1.11 mm
+  */
+  var startPoint = { lat: 52.51, lng:13.4 }
+  var grid = []
+  console.log(makeGrid(startPoint))
+  // var haversine_distance_meters_approx_130 = haversineDistance({lat: 52.51, lng:13.4}, {lat: 52.511, lng:13.401})
+  // console.log('haversine_distance_meters_approx_130: ' + haversine_distance_meters_approx_130)
+  
+  function makeGrid(startPoint) {
+    bounds = [startPoint]
+    
+    var x = startPoint.lat + (.001 * 100)
+    var y = startPoint.lng + (.001 * 100)
+
+    bounds.push({lat: x, lng: startPoint.lng})
+    bounds.push({lat: startPoint.lat, y})
+    bounds.push({lat: x, y})
+    return bounds
+
+  }
+  // yBounds = startPoint.lng + (.001 * 10)
+
+  // function buildDataFromStartPoint(startPoint) {
+  //   var shapes = []
+  //   shapes.push(startPoint)
+
+  //   var lastPoint = startPoint
+  //   for(i=0; i< 100; i++) {
+  //     for(j=0; j< 100; j++) {
+  //       var lat = lastPoint.lat + .001
+  //       var lng = lastPoint.lng + .001
+  //       matrix.push( {lat, lng} )
+  //       // matrix.push({ lastPoint.lat + .001, lastPoint.lng + .001 })
+  //       // matrix[i][j] = { lastPoint.lat + .001, lastPoint.lng + .001 }
+  //     }
+  //   }
+  // }
+  map.addLayer(new H.map.layer.CanvasLayer(function(ctx, renderingParams) {
+  var center = renderingParams.boundingBox.getCenter(),
+    pixelRatio = renderingParams.pixelRatio,
+    x = renderingParams.screenCenter.x * pixelRatio,
+    y = renderingParams.screenCenter.y * pixelRatio,
+    size = 12 * pixelRatio;
+
+  if (map.getEngine().type === H.Map.EngineType.WEBGL) {
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  }
+  ctx.textAlign = 'center'; ctx.font = size + 'px sans-serif';
+  ctx.fillText(
+  center.lat.toFixed(7) + '˚ / ' + center.lng.toFixed(7) + '˚',
+  x, y - size * 1.5
+  );
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, 2 * Math.PI);
+  size *= 1.4;
+  ctx.moveTo(x, y - size); ctx.lineTo(x, y + size);
+  ctx.moveTo(x - size, y); ctx.lineTo(x + size, y);
+  ctx.stroke();
+  return H.map.render.RenderState.DONE;
+}));
+  var boundingBox = new H.geo.Rect(52.5696977, 13.4050813, 52.4690527, 13.3127810);
+   var box = new H.map.Rect(boundingBox, {
+      style: {
+        fillColor: 'rgba(39, 95, 245, 0.32)',
+        strokeColor: 'none',
+        lineWidth: 0
+      },
+    })
+
+  var circle = new H.map.Circle(
+    {lat: 52.51, lng:13.4}, 80, {
+      extrude: 80, 
+      style: {fillColor: 'rgba(255,0,0,0.3)', strokeColor: 'rgba(0, 85, 170, 0.6)'}
+  })
+
+  var circle2 = new H.map.Circle(
+    {lat: 52.511, lng:13.401}, 80, {
+      extrude: 80, 
+      style: {fillColor: 'rgba(255,0,0,0.2)', strokeColor: 'none'}
+  })
+
+  // var square = new H.map.Polygon(
+  //   {lat: 52.51, lng:13.4}, 100, {
+  //     // extrude the circle to 40 meters
+  //     extrude: 80, 
+  //     style: {fillColor: 'rgba(255,0,0,0.3)', strokeColor: 'none'}
+  // })
+  // var polygon = new H.map.Polygon(new H.geo.Polygon(
+  //   // define the outer ring of the polygon
+  //   new H.geo.LineString([
+  //     48.872736787725835, 2.3357521086738733, 0,
+  //     48.872999137012414, 2.336246110725605, 0,
+  //     48.873206469632656, 2.335367301542851, 0,
+  //     48.8730321868559, 2.33536897595885, 0,
+  //     48.87279198168118, 2.3354461066058567, 0
+  //   ]), [
+  //     // define the holes in the polygon
+  //     new H.geo.LineString([
+  //       48.87289262905369, 2.3355164652820624, 0,
+  //       48.87293843005124, 2.3356328576727807, 0,
+  //       48.872856799273066, 2.3357070736759376, 0,
+  //       48.87280671673371, 2.3355991272331043, 0
+  //     ])
+  //   ]
+  // ), {
+  //   // extrude the polygon to 90 meters
+  //   extrude: 90, 
+  //   style: {strokeColor: 'none'}
+  // });
+
+  // map.addObjects([polygon, circle]);
+  map.addObjects([box,circle,circle2])
+}
+  
 
   </script>
   </body>
+    <!-- <script type="text/javascript" src="scripts/basic_map.js"></script> -->
 </html>
