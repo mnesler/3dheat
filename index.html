@@ -26,7 +26,7 @@
     var map = new H.Map( document.getElementById('mapContainer'),
       maptypes.vector.normal.map,
       {
-        zoom: 17,
+        zoom: 10,
         tilt: 45,
         center: { lng: 13.4, lat: 52.51 },
         pixelRatio: window.devicePixelRatio || 1
@@ -39,7 +39,7 @@
     var behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
     var ui = H.ui.UI.createDefault(map, maptypes);
 
-  // setInterval(turnMap, 59)
+   setInterval(turnMap, 59)
 
 
 function turnMap() {
@@ -142,12 +142,12 @@ function addShapesToMap(map) {
 
   var circle = new H.map.Circle(
     {lat: 52.51, lng:13.4}, 80, {
-      extrude: 80, 
+      extrude: 40, 
       style: {fillColor: 'rgba(255,0,0,0.3)', strokeColor: 'rgba(0, 85, 170, 0.6)'}
   })
 
   var circle2 = new H.map.Circle(
-    {lat: 52.511, lng:13.401}, 80, {
+    {lat: 52.511, lng:13.401}, 40, {
       extrude: 80, 
       style: {fillColor: 'rgba(255,0,0,0.2)', strokeColor: 'none'}
   })
